@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f9f9f9; }
+    .phrase-box { font-size: 24px; font-weight: bold; margin: 30px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 400px; }
+    button { font-size: 18px; padding: 15px 30px; margin: 10px; cursor: pointer; border-radius: 30px; border: none; font-weight: bold; }
+    #recordBtn { color: white; background-color: #4285F4; }
+    #stopBtn { display: none; color: white; background-color: #EA4335; }
+    #status { margin-top: 20px; color: #555; }
+  </style>
+</head>
+<body>
+  <h2>今日の課題フレーズ</h2>
+  <div id="phraseDisplay" class="phrase-box">読み込み中...</div>
+<button onclick="window.open(window.location.href, '_top')" style="background-color: #FBBC05; color: #333; margin-bottom: 20px;">
+    🔗 ここをクリックしてマイク設定を有効にする
+  </button>
+  <button id="recordBtn" onclick="startRecording()">🎤 録音スタート</button>
+  <button id="stopBtn" onclick="stopRecording()">⏹ 完了して送信</button>
+
+  <p id="status">マイクの許可を求められたら「許可」を押してください。</p>
+
+  <script>
+    // ランダムに出題されるフレーズのリスト
+    const phrases = [
+      "Check it out at eight.",
+      "The cat sat on a cut rug.",
+      "I didn't say he stole the money."
+    ];
+
+    const targetPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+    document.getElementById('phraseDisplay').innerText = targetPhrase;
+
+    let mediaRecorder;
+    let audioChunks = [];
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          sendDataToGAS(audioBlob);
+          audioChunks = []; // 次のためにリセット
+        };
+
+        mediaRecorder.start();
+        document.getElementById('recordBtn').style.display = 'none';
+        document.getElementById('stopBtn').style.display = 'inline-block';
+        document.getElementById('status').innerText = "🔴 録音中... 読み終わったらボタンを押してください。";
+      } catch (err) {
+      // ▼変更：エラーの「本当の理由」を画面に出力する
+        document.getElementById('status').innerHTML = 
+          "<b>エラー: マイクへのアクセスができません。</b><br>" + 
+          "<span style='color:red; font-size:14px;'>詳細: " + err.name + " (" + err.message + ")</span>";
+      }
+    }
+
+    function stopRecording() {
+      mediaRecorder.stop();
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('status').innerText = "⏳ 音声データを送信しています...";
+    }
+
+   function sendDataToGAS(blob) {
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = function() {
+        const base64data = reader.result;
+        const fileName = "発音テスト_" + new Date().getTime();
+
+        // ★ここに「新しいデプロイ」で取得したURLを貼る
+        const gasUrl = "https://script.google.com/a/macros/link-academy.co.jp/s/AKfycbyLyoW6P8fRHL3HV9XqnOizptKwIeqBqxV0Tf6Vtx8LEd-JY2ANKNGp3tx9rVrvvMKb/exec";
+
+        fetch(gasUrl, {
+          method: "POST",
+          mode: "no-cors", // 重要：GASへの送信で必要
+          body: JSON.stringify({
+            base64Data: base64data,
+            fileName: fileName
+          })
+        }).then(() => {
+          document.getElementById('status').innerText = "✅ 保存完了！ ドライブを確認してください。";
+          document.getElementById('recordBtn').style.display = 'inline-block';
+          document.getElementById('recordBtn').innerText = "もう一度録音する";
+        }).catch(err => {
+          document.getElementById('status').innerText = "送信エラー: " + err;
+        });
+      }
+    }
+  </script>
+</body>
+</html>
