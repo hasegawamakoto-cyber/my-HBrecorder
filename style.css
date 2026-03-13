@@ -99,13 +99,29 @@ header {
     margin-bottom: 32px;
 }
 
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
 .task-section h2 {
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--text-muted);
-    margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-bottom: 0;
+}
+
+.phrase-counter {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 2px 10px;
+    border-radius: 10px;
 }
 
 .phrase-card {
