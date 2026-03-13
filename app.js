@@ -132,7 +132,7 @@ async function uploadToSupabase(blob, studentId) {
 
     try {
         const { data, error } = await supabaseClient.storage
-            .from('recording')
+            .from('recordings')
             .upload(fileName, blob);
 
         if (error) throw error;
@@ -141,7 +141,7 @@ async function uploadToSupabase(blob, studentId) {
         updateUIState('ready');
     } catch (err) {
         console.error('Upload failed:', err);
-        showStatus('保存に失敗しました。SupabaseのURL/Key、またはバケット名「recording」の設定を確認してください。', 'error');
+        showStatus('保存に失敗しました。SupabaseのURL/Key、またはバケット名「recordings」の設定を確認してください。', 'error');
         updateUIState('ready');
     }
 }
