@@ -210,7 +210,8 @@ async function uploadToSupabase(blob, studentId) {
         updateUIState('ready');
     } catch (err) {
         console.error('Upload failed:', err);
-        showStatus('保存に失敗しました。SupabaseのURL/Key、またはバケット名「recordings」の設定を確認してください。', 'error');
+        const errorMsg = err.message || '不明なエラー';
+        showStatus(`保存に失敗しました (${errorMsg})。SupabaseのURL/Key、またはバケット名「recordings」の設定を確認してください。`, 'error');
         updateUIState('ready');
     }
 }
