@@ -22,6 +22,8 @@ const statusBadge = document.getElementById('status-badge');
 const statusMessage = document.getElementById('status-message');
 const visualizer = document.getElementById('visualizer');
 const canvasCtx = visualizer.getContext('2d');
+const phraseText = document.getElementById('phrase-text');
+const phraseCounter = document.getElementById('phrase-counter');
 
 // State
 let mediaRecorder = null;
@@ -30,6 +32,25 @@ let isRecording = false;
 let audioContext = null;
 let analyser = null;
 let animationId = null;
+
+const PHRASES = [
+    "Where do you live in Los Angeles?",
+    "I heard her first word yesterday.",
+    "Please tell me how to get there.",
+    "Let’s go downtown after the party.",
+    "Can you help me find my car?"
+];
+let currentPhraseIndex = 0;
+
+// Initialize UI
+function initUI() {
+    updatePhraseDisplay();
+}
+
+function updatePhraseDisplay() {
+    phraseText.textContent = PHRASES[currentPhraseIndex];
+    phraseCounter.textContent = `${currentPhraseIndex + 1} / ${PHRASES.length}`;
+}
 
 // Initialize Visualizer
 function initVisualizer(stream) {
@@ -96,18 +117,34 @@ async function startRecording() {
             // Cleanup visualizer
             if (audioContext) audioContext.close();
             cancelAnimationFrame(animationId);
+            
+            // Reset to beginning
+            currentPhraseIndex = 0;
+            updatePhraseDisplay();
         };
 
         mediaRecorder.start();
         initVisualizer(stream);
 
         isRecording = true;
+        currentPhraseIndex = 0;
+        updatePhraseDisplay();
         updateUIState('recording');
         showStatus('', 'hidden');
 
     } catch (err) {
         console.error('Microphone access denied:', err);
         showStatus('マイクの使用が許可されませんでした。設定を確認してください。', 'error');
+    }
+}
+
+function nextPhrase() {
+    if (currentPhraseIndex < PHRASES.length - 1) {
+        currentPhraseIndex++;
+        updatePhraseDisplay();
+        updateUIState('recording');
+    } else {
+        stopRecording();
     }
 }
 
@@ -150,10 +187,17 @@ async function uploadToSupabase(blob, studentId) {
 function updateUIState(state) {
     recordBtn.classList.remove('recording');
     statusBadge.className = 'badge';
-
+    
     if (state === 'recording') {
         recordBtn.classList.add('recording');
-        recordBtn.querySelector('.text').textContent = '停止して保存';
+        
+        // Change text based on phrase index
+        if (currentPhraseIndex < PHRASES.length - 1) {
+            recordBtn.querySelector('.text').textContent = '次のフレーズへ';
+        } else {
+            recordBtn.querySelector('.text').textContent = '録音を終了して保存';
+        }
+        
         statusBadge.classList.add('recording');
         statusBadge.textContent = 'Recording';
     } else if (state === 'uploading') {
@@ -179,8 +223,11 @@ function showStatus(msg, type) {
 // Event Listeners
 recordBtn.addEventListener('click', () => {
     if (isRecording) {
-        stopRecording();
+        nextPhrase();
     } else {
         startRecording();
     }
 });
+
+// Start
+initUI();
