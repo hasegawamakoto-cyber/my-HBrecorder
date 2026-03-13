@@ -24,6 +24,11 @@ const visualizer = document.getElementById('visualizer');
 const canvasCtx = visualizer.getContext('2d');
 const phraseText = document.getElementById('phrase-text');
 const phraseCounter = document.getElementById('phrase-counter');
+const previewSection = document.getElementById('preview-section');
+const audioPlayer = document.getElementById('audio-player');
+const retryBtn = document.getElementById('retry-btn');
+const uploadBtn = document.getElementById('upload-btn');
+const taskSection = document.getElementById('task-section');
 
 // State
 let mediaRecorder = null;
@@ -32,6 +37,8 @@ let isRecording = false;
 let audioContext = null;
 let analyser = null;
 let animationId = null;
+let latestBlob = null;
+let latestAudioURL = null;
 
 const PHRASES = [
     "Where do you live in Los Angeles?",
@@ -111,16 +118,18 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            await uploadToSupabase(audioBlob, studentId);
+            latestBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            
+            // Create local URL for preview
+            if (latestAudioURL) URL.revokeObjectURL(latestAudioURL);
+            latestAudioURL = URL.createObjectURL(latestBlob);
+            audioPlayer.src = latestAudioURL;
 
             // Cleanup visualizer
             if (audioContext) audioContext.close();
             cancelAnimationFrame(animationId);
             
-            // Reset to beginning
-            currentPhraseIndex = 0;
-            updatePhraseDisplay();
+            updateUIState('review');
         };
 
         mediaRecorder.start();
@@ -153,8 +162,27 @@ function stopRecording() {
         mediaRecorder.stop();
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
         isRecording = false;
-        updateUIState('uploading');
     }
+}
+
+async function handleUpload() {
+    const studentId = studentIdInput.value.trim();
+    if (!latestBlob || !studentId) return;
+    
+    updateUIState('uploading');
+    await uploadToSupabase(latestBlob, studentId);
+    
+    // Reset to beginning after success
+    currentPhraseIndex = 0;
+    updatePhraseDisplay();
+}
+
+function handleRetry() {
+    // Reset state and return to ready
+    currentPhraseIndex = 0;
+    updatePhraseDisplay();
+    updateUIState('ready');
+    showStatus('', 'hidden');
 }
 
 async function uploadToSupabase(blob, studentId) {
@@ -187,27 +215,47 @@ async function uploadToSupabase(blob, studentId) {
 function updateUIState(state) {
     recordBtn.classList.remove('recording');
     statusBadge.className = 'badge';
+    previewSection.classList.add('hidden');
+    taskSection.classList.add('hidden');
+    studentIdInput.disabled = false;
     
     if (state === 'recording') {
+        recordBtn.style.display = 'flex';
         recordBtn.classList.add('recording');
+        taskSection.classList.remove('hidden');
+        studentIdInput.disabled = true;
         
-        // Change text based on phrase index
         if (currentPhraseIndex < PHRASES.length - 1) {
             recordBtn.querySelector('.text').textContent = '次のフレーズへ';
         } else {
-            recordBtn.querySelector('.text').textContent = '録音を終了して保存';
+            recordBtn.querySelector('.text').textContent = '全フレーズ終了（確認へ）';
         }
         
         statusBadge.classList.add('recording');
         statusBadge.textContent = 'Recording';
+    } else if (state === 'review') {
+        recordBtn.style.display = 'none';
+        previewSection.classList.remove('hidden');
+        studentIdInput.disabled = true;
+        statusBadge.classList.add('ready');
+        statusBadge.textContent = 'Review';
     } else if (state === 'uploading') {
+        recordBtn.style.display = 'flex';
+        recordBtn.disabled = true;
         recordBtn.querySelector('.text').textContent = '保存中...';
         statusBadge.classList.add('uploading');
         statusBadge.textContent = 'Uploading';
     } else {
+        recordBtn.style.display = 'flex';
+        recordBtn.disabled = false;
         recordBtn.querySelector('.text').textContent = 'REC開始';
         statusBadge.classList.add('ready');
         statusBadge.textContent = 'Ready';
+        
+        if (latestAudioURL) {
+            URL.revokeObjectURL(latestAudioURL);
+            latestAudioURL = null;
+        }
     }
 }
 
@@ -228,6 +276,9 @@ recordBtn.addEventListener('click', () => {
         startRecording();
     }
 });
+
+retryBtn.addEventListener('click', handleRetry);
+uploadBtn.addEventListener('click', handleUpload);
 
 // Start
 initUI();
