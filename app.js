@@ -3,9 +3,16 @@
 const SUPABASE_URL = 'https://qyttpvyjqgmkwhrixjff.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_iIC7N-bj5ZnoY5mWRaL1WA_4c4luGAB';
 
-let supabase = null;
-if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabaseClient = null;
+try {
+    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase initialized successfully');
+    } else {
+        console.warn('Supabase URL is placeholder or library not loaded');
+    }
+} catch (e) {
+    console.error('Failed to initialize Supabase:', e);
 }
 
 // Elements
@@ -114,8 +121,8 @@ function stopRecording() {
 }
 
 async function uploadToSupabase(blob, studentId) {
-    if (!supabase) {
-        showStatus('Supabaseが設定されていません。コード内のURLとKeyを入力してください。', 'error');
+    if (!supabaseClient) {
+        showStatus('Supabaseが設定されていないか、初期化に失敗しています。', 'error');
         updateUIState('ready');
         return;
     }
@@ -124,7 +131,7 @@ async function uploadToSupabase(blob, studentId) {
     const fileName = `${studentId}_${timestamp}.webm`;
 
     try {
-        const { data, error } = await supabase.storage
+        const { data, error } = await supabaseClient.storage
             .from('recording')
             .upload(fileName, blob);
 
@@ -134,7 +141,7 @@ async function uploadToSupabase(blob, studentId) {
         updateUIState('ready');
     } catch (err) {
         console.error('Upload failed:', err);
-        showStatus('保存に失敗しました。Supabaseの設定やバケット名を確認してください。', 'error');
+        showStatus('保存に失敗しました。SupabaseのURL/Key、またはバケット名「recording」の設定を確認してください。', 'error');
         updateUIState('ready');
     }
 }
