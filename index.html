@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Recorder - HB Recording</title>
+    <title>Pronunciation Proficiency Test - HB Recording</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +14,7 @@
 <body>
     <div class="glass-container">
         <header>
-            <h1 class="premium-title">Voice Recorder</h1>
+            <h1 class="premium-title">Pronunciation Proficiency Test</h1>
             <p class="subtitle">HB Recording System</p>
         </header>
 
@@ -24,7 +24,7 @@
                 <input type="text" id="student-id" placeholder="例: ST12345" required>
             </section>
 
-            <section class="task-section">
+            <section id="task-section" class="task-section hidden">
                 <div class="task-header">
                     <h2>今日の課題フレーズ</h2>
                     <span id="phrase-counter" class="phrase-counter">1 / 5</span>
@@ -48,13 +48,22 @@
                 </div>
             </section>
 
+            <section id="preview-section" class="preview-section hidden">
+                <h3>録音内容の確認</h3>
+                <audio id="audio-player" controls></audio>
+                <div class="preview-controls">
+                    <button id="retry-btn" class="btn-secondary">撮り直す</button>
+                    <button id="upload-btn" class="btn-primary">これで保存する</button>
+                </div>
+            </section>
+
             <section id="status-message" class="status-message hidden">
                 <!-- Status content dynamically inserted -->
             </section>
         </main>
 
         <footer>
-            <p>&copy; 2026 HB Recording Service</p>
+            <p>&copy;Link Academy Inc. ALL Rights Reserved.</p>
         </footer>
     </div>
 
