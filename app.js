@@ -178,6 +178,10 @@ async function handleUpload() {
 }
 
 function handleRetry() {
+    // Stop audio playback if running
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+
     // Reset state and return to ready
     currentPhraseIndex = 0;
     updatePhraseDisplay();
@@ -213,7 +217,7 @@ async function uploadToSupabase(blob, studentId) {
 
 // UI Helpers
 function updateUIState(state) {
-    recordBtn.classList.remove('recording');
+    recordBtn.classList.remove('recording', 'next', 'final');
     statusBadge.className = 'badge';
     previewSection.classList.add('hidden');
     taskSection.classList.add('hidden');
@@ -227,8 +231,10 @@ function updateUIState(state) {
         
         if (currentPhraseIndex < PHRASES.length - 1) {
             recordBtn.querySelector('.text').textContent = '次のフレーズへ';
+            recordBtn.classList.add('next');
         } else {
             recordBtn.querySelector('.text').textContent = '全フレーズ終了（確認へ）';
+            recordBtn.classList.add('final');
         }
         
         statusBadge.classList.add('recording');
