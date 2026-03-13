@@ -214,16 +214,35 @@ header {
 }
 
 .btn-record .icon {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     background: white;
     border-radius: 50%;
     transition: all 0.3s ease;
+    position: relative;
 }
 
 .btn-record.recording .icon {
     border-radius: 2px;
+}
+
+/* Next arrow icon */
+.btn-record.recording.next .icon {
+    background: transparent;
+    border-radius: 0;
+    width: 10px;
+    height: 10px;
+    border-top: 3px solid white;
+    border-right: 3px solid white;
+    transform: rotate(45deg);
+    margin-right: 4px;
+}
+
+/* Final stop square icon */
+.btn-record.recording.final .icon {
+    border-radius: 2px;
     transform: scale(1.1);
+    background: white;
 }
 
 .preview-section {
