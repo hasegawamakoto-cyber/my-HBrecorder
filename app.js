@@ -2,6 +2,7 @@
 // The user should fill these values
 const SUPABASE_URL = 'https://qyttpvyjqgmkwhrixjff.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_iIC7N-bj5ZnoY5mWRaL1WA_4c4luGAB';
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyvWVTlwnC8YsnnPTLxZBjtBuN0M7Tm8k4W9NtdRhTk3QtITcU-Q9XglJ1mtdwW0har/exec';
 
 let supabaseClient = null;
 try {
@@ -52,6 +53,7 @@ let currentPhraseIndex = 0;
 // Initialize UI
 function initUI() {
     updatePhraseDisplay();
+    updateUIState('ready');
 }
 
 function updatePhraseDisplay() {
@@ -206,13 +208,43 @@ async function uploadToSupabase(blob, studentId) {
 
         if (error) throw error;
 
-        showStatus(`保存完了しました: ${fileName}`, 'success');
+        // 2. Get Public URL
+        const { data: { publicUrl } } = supabaseClient.storage
+            .from('recordings')
+            .getPublicUrl(fileName);
+
+        showStatus(`Supabaseに保存しました。スプレッドシートに記録中...`, 'success');
+
+        // 3. Send to Google Sheets (GAS)
+        await sendToGoogleSheets(studentId, publicUrl);
+
+        showStatus(`全ての保存が完了しました！: ${fileName}`, 'success');
         updateUIState('ready');
     } catch (err) {
         console.error('Upload failed:', err);
         const errorMsg = err.message || '不明なエラー';
         showStatus(`保存に失敗しました (${errorMsg})。SupabaseのURL/Key、またはバケット名「recordings」の設定を確認してください。`, 'error');
         updateUIState('ready');
+    }
+}
+
+// GAS transmission logic
+async function sendToGoogleSheets(studentId, audioUrl) {
+    try {
+        await fetch(GAS_WEBAPP_URL, {
+            method: "POST",
+            mode: "no-cors", 
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                studentId: studentId,
+                audioUrl: audioUrl
+            })
+        });
+        console.log('Successfully notified Google Sheets');
+    } catch (err) {
+        console.error('Failed to notify Google Sheets:', err);
     }
 }
 
