@@ -21,7 +21,26 @@
         <main>
             <section class="input-group">
                 <label for="student-id">受講生番号</label>
-                <input type="text" id="student-id" placeholder="例: ST12345" required>
+                <input type="text" id="student-id" placeholder="例: L1234567890" spellcheck="false" required maxlength="11">
+                <p class="input-hint">半角大文字L + 数字10桁で入力してください</p>
+            </section>
+
+            <section class="input-group">
+                <label for="student-name">氏名</label>
+                <input type="text" id="student-name" placeholder="例: 山田太郎" spellcheck="false" required>
+            </section>
+
+            <section class="input-group">
+                <label for="student-level">テストレベル</label>
+                <select id="student-level" required>
+                    <option value="" disabled selected>選択してください</option>
+                    <option value="Lv.1A">Lv.1A</option>
+                    <option value="Lv.1B">Lv.1B</option>
+                    <option value="Lv.2A">Lv.2A</option>
+                    <option value="Lv.2B">Lv.2B</option>
+                    <option value="Lv.3">Lv.3</option>
+                    <option value="Lv.4">Lv.4</option>
+                </select>
             </section>
 
             <section id="task-section" class="task-section hidden">
