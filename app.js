@@ -18,6 +18,8 @@ try {
 
 // Elements
 const studentIdInput = document.getElementById('student-id');
+const studentNameInput = document.getElementById('student-name');
+const studentLevelInput = document.getElementById('student-level');
 const recordBtn = document.getElementById('record-btn');
 const statusBadge = document.getElementById('status-badge');
 const statusMessage = document.getElementById('status-message');
@@ -104,8 +106,19 @@ function initVisualizer(stream) {
 // Recording Logic
 async function startRecording() {
     const studentId = studentIdInput.value.trim();
-    if (!studentId) {
-        showStatus('受講生番号を入力してください', 'error');
+    const studentName = studentNameInput.value.trim();
+    const studentLevel = studentLevelInput.value;
+    
+    // Validation: L + 10 digits
+    const studentIdPattern = /^L\d{10}$/;
+    
+    if (!studentId || !studentName || !studentLevel) {
+        showStatus('受講生番号、氏名、テストレベルをすべて入力してください', 'error');
+        return;
+    }
+    
+    if (!studentIdPattern.test(studentId)) {
+        showStatus('受講生番号の形式が正しくありません (例: L1234567890)', 'error');
         return;
     }
 
@@ -169,10 +182,13 @@ function stopRecording() {
 
 async function handleUpload() {
     const studentId = studentIdInput.value.trim();
-    if (!latestBlob || !studentId) return;
+    const studentName = studentNameInput.value.trim();
+    const studentLevel = studentLevelInput.value;
+
+    if (!latestBlob || !studentId || !studentName || !studentLevel) return;
     
     updateUIState('uploading');
-    await uploadToSupabase(latestBlob, studentId);
+    await uploadToSupabase(latestBlob, studentId, studentName, studentLevel);
     
     // Reset to beginning after success
     currentPhraseIndex = 0;
@@ -191,22 +207,45 @@ function handleRetry() {
     showStatus('', 'hidden');
 }
 
-async function uploadToSupabase(blob, studentId) {
+function getFormattedTimestamp() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+}
+
+async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
     if (!supabaseClient) {
         showStatus('Supabaseが設定されていないか、初期化に失敗しています。', 'error');
         updateUIState('ready');
         return;
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `${studentId}_${timestamp}.webm`;
+    const timestamp = getFormattedTimestamp();
+    
+    // Sanitize studentId for filename (Supabase Storage key)
+    // Non-ASCII characters and special characters are replaced with underscores to avoid "Invalid key" error.
+    const safeStudentId = studentId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const safeStudentName = studentName.replace(/[\\/:*?"<>| ]/g, '_');
+    const fileName = `${safeStudentId}_${safeStudentName}_${studentLevel}_${timestamp}.webm`;
 
     try {
         const { data, error } = await supabaseClient.storage
             .from('recordings')
-            .upload(fileName, blob);
+            .upload(fileName, blob, {
+                contentType: 'audio/webm',
+                cacheControl: '3600',
+                upsert: false
+            });
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase upload error:', error);
+            throw error;
+        }
 
         // 2. Get Public URL
         const { data: { publicUrl } } = supabaseClient.storage
@@ -216,20 +255,28 @@ async function uploadToSupabase(blob, studentId) {
         showStatus(`Supabaseに保存しました。スプレッドシートに記録中...`, 'success');
 
         // 3. Send to Google Sheets (GAS)
-        await sendToGoogleSheets(studentId, publicUrl);
+        await sendToGoogleSheets(studentId, studentName, studentLevel, publicUrl);
 
         showStatus(`全ての保存が完了しました！: ${fileName}`, 'success');
         updateUIState('ready');
     } catch (err) {
         console.error('Upload failed:', err);
-        const errorMsg = err.message || '不明なエラー';
-        showStatus(`保存に失敗しました (${errorMsg})。SupabaseのURL/Key、またはバケット名「recordings」の設定を確認してください。`, 'error');
+        let errorMsg = err.message || '不明なエラー';
+        
+        // Translate common Supabase errors for students
+        if (errorMsg.includes('Invalid key')) {
+            errorMsg = 'ファイル名に制限事項があります。管理者に連絡してください。';
+        } else if (errorMsg.includes('Bucket not found')) {
+            errorMsg = '保存先の設定（Bucket）が見つかりません。';
+        }
+        
+        showStatus(`保存に失敗しました (${errorMsg})。通信環境を確認し、解決しない場合は管理者にエラー内容を伝えてください。`, 'error');
         updateUIState('ready');
     }
 }
 
 // GAS transmission logic
-async function sendToGoogleSheets(studentId, audioUrl) {
+async function sendToGoogleSheets(studentId, studentName, studentLevel, audioUrl) {
     try {
         await fetch(GAS_WEBAPP_URL, {
             method: "POST",
@@ -239,6 +286,8 @@ async function sendToGoogleSheets(studentId, audioUrl) {
             },
             body: JSON.stringify({
                 studentId: studentId,
+                studentName: studentName,
+                studentLevel: studentLevel,
                 audioUrl: audioUrl
             })
         });
@@ -255,12 +304,16 @@ function updateUIState(state) {
     previewSection.classList.add('hidden');
     taskSection.classList.add('hidden');
     studentIdInput.disabled = false;
+    studentNameInput.disabled = false;
+    studentLevelInput.disabled = false;
     
     if (state === 'recording') {
         recordBtn.style.display = 'flex';
         recordBtn.classList.add('recording');
         taskSection.classList.remove('hidden');
         studentIdInput.disabled = true;
+        studentNameInput.disabled = true;
+        studentLevelInput.disabled = true;
         
         if (currentPhraseIndex < PHRASES.length - 1) {
             recordBtn.querySelector('.text').textContent = '次のフレーズへ';
@@ -276,6 +329,8 @@ function updateUIState(state) {
         recordBtn.style.display = 'none';
         previewSection.classList.remove('hidden');
         studentIdInput.disabled = true;
+        studentNameInput.disabled = true;
+        studentLevelInput.disabled = true;
         statusBadge.classList.add('ready');
         statusBadge.textContent = 'Review';
     } else if (state === 'uploading') {
@@ -318,6 +373,14 @@ recordBtn.addEventListener('click', () => {
 
 retryBtn.addEventListener('click', handleRetry);
 uploadBtn.addEventListener('click', handleUpload);
+
+// Prevent accidental closure
+window.addEventListener('beforeunload', (e) => {
+    if (isRecording || latestBlob) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
 
 // Start
 initUI();
