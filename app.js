@@ -227,11 +227,14 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
 
     const timestamp = getFormattedTimestamp();
     
-    // Sanitize studentId for filename (Supabase Storage key)
-    // Non-ASCII characters and special characters are replaced with underscores to avoid "Invalid key" error.
+    // Sanitize for Supabase Storage key: Replace problematic characters
+    // Especially dot (.) inside the name or level can cause "Invalid key" issues
     const safeStudentId = studentId.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const safeStudentName = studentName.replace(/[\\/:*?"<>| ]/g, '_');
-    const fileName = `${safeStudentId}_${safeStudentName}_${studentLevel}_${timestamp}.webm`;
+    const safeStudentName = studentName.replace(/[./\\:*?"<>| ]/g, '_');
+    const safeStudentLevel = studentLevel.replace(/[./\\:*?"<>| ]/g, ''); // Remove dot from "Lv.1A" etc.
+    
+    const fileName = `${safeStudentId}_${safeStudentName}_${safeStudentLevel}_${timestamp}.webm`;
+    console.log('Attempting upload with filename:', fileName);
 
     try {
         const { data, error } = await supabaseClient.storage
