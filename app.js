@@ -262,7 +262,7 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
             .from('recordings')
             .getPublicUrl(fileName);
 
-        showStatus(`Supabaseに保存しました。スプレッドシートに記録中...`, 'success');
+        showStatus(`音声ファイルを保存しました。DBに記録中...`, 'success');
 
         // 3. Send to Google Sheets (GAS)
         // Format date as yyyy/mm/dd hh:mm:ss for Spreadsheet
@@ -306,9 +306,9 @@ async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel,
             },
             body: JSON.stringify({
                 studentId: studentId,
-                studentName: studentName,
+                name: studentName,
                 date: dateStr,
-                studentLevel: studentLevel,
+                lv: studentLevel,
                 audioUrl: audioUrl
             })
         });
