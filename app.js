@@ -140,7 +140,18 @@ async function startRecording() {
         };
 
         mediaRecorder.onstop = async () => {
-            latestBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const webmBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+            try {
+                showStatus('音声データをWAVに変換中...', 'success');
+                const arrayBuffer = await webmBlob.arrayBuffer();
+                const offlineCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
+                latestBlob = audioBufferToWav(audioBuffer);
+            } catch (err) {
+                console.error('WAV conversion error:', err);
+                latestBlob = webmBlob; // 変換失敗時はそのままWebMを使う
+            }
 
             // Create local URL for preview
             if (latestAudioURL) URL.revokeObjectURL(latestAudioURL);
@@ -152,6 +163,7 @@ async function startRecording() {
             cancelAnimationFrame(animationId);
 
             updateUIState('review');
+            showStatus('', 'hidden');
         };
 
         mediaRecorder.start();
@@ -240,14 +252,15 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
     const safeStudentName = studentName.replace(/[./\\:*?"<>| ]/g, '_');
     const safeStudentLevel = studentLevel.replace(/[./\\:*?"<>| ]/g, ''); // Remove dot from "Lv.1A" etc.
 
-    const fileName = `${safeStudentId}_${safeStudentName}_${safeStudentLevel}_${timestamp}.webm`;
+    const extension = blob.type.includes('wav') ? 'wav' : 'webm';
+    const fileName = `${safeStudentId}_${safeStudentName}_${safeStudentLevel}_${timestamp}.${extension}`;
     console.log('Attempting upload with filename:', fileName);
 
     try {
         const { data, error } = await supabaseClient.storage
             .from('recordings')
             .upload(fileName, blob, {
-                contentType: 'audio/webm',
+                contentType: blob.type,
                 cacheControl: '3600',
                 upsert: false
             });
@@ -409,3 +422,56 @@ window.addEventListener('beforeunload', (e) => {
 
 // Start
 initUI();
+
+// WAV Conversion Helpers
+function audioBufferToWav(buffer) {
+    const numOfChan = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const result = new Int16Array(buffer.length * numOfChan);
+    let offset = 0;
+    const channels = [];
+    for (let i = 0; i < numOfChan; i++) {
+        channels.push(buffer.getChannelData(i));
+    }
+    
+    while (offset < buffer.length) {
+        for (let i = 0; i < numOfChan; i++) {
+            let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+            sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            result[offset * numOfChan + i] = sample;
+        }
+        offset++;
+    }
+    
+    const dataSize = result.length * 2;
+    const bufferArray = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(bufferArray);
+    
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numOfChan, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numOfChan * 2, true);
+    view.setUint16(32, numOfChan * 2, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+    
+    const dataView = new Int16Array(bufferArray, 44);
+    dataView.set(result);
+    
+    return new Blob([bufferArray], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
