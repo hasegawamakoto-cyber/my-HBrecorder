@@ -1,8 +1,8 @@
 // Supabase Configuration - TEMPLATE
 // The user should fill these values
-const SUPABASE_URL = 'https://qyttpvyjqgmkwhrixjff.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_iIC7N-bj5ZnoY5mWRaL1WA_4c4luGAB';
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyvWVTlwnC8YsnnPTLxZBjtBuN0M7Tm8k4W9NtdRhTk3QtITcU-Q9XglJ1mtdwW0har/exec';
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+const GAS_WEBAPP_URL = '__GAS_WEBAPP_URL__';
 
 let supabaseClient = null;
 try {
