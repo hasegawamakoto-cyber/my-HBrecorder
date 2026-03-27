@@ -306,9 +306,9 @@ async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel,
             },
             body: JSON.stringify({
                 studentId: studentId,
-                name: studentName,
+                studentName: studentName,
                 date: dateStr,
-                lv: studentLevel,
+                studentLevel: studentLevel,
                 audioUrl: audioUrl
             })
         });
