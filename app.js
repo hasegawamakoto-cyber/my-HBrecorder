@@ -297,22 +297,26 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
 
 // GAS transmission logic
 async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, audioUrl) {
+    const payload = {
+        studentId: studentId,
+        studentName: studentName,
+        date: dateStr,
+        studentLevel: studentLevel,
+        audioUrl: audioUrl
+    };
+    
+    console.log('Sending to GAS:', payload);
+
     try {
-        await fetch(GAS_WEBAPP_URL, {
+        const response = await fetch(GAS_WEBAPP_URL, {
             method: "POST",
             mode: "no-cors",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "text/plain",
             },
-            body: JSON.stringify({
-                studentId: studentId,
-                studentName: studentName,
-                date: dateStr,
-                studentLevel: studentLevel,
-                audioUrl: audioUrl
-            })
+            body: JSON.stringify(payload)
         });
-        console.log('Successfully notified Google Sheets');
+        console.log('GAS notification sent. Response status:', response.status);
     } catch (err) {
         console.error('Failed to notify Google Sheets:', err);
     }
