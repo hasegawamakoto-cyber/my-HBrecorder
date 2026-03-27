@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,27 +8,34 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
     <!-- Supabase JS Client via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
     <div class="glass-container">
         <header>
             <h1 class="premium-title">Pronunciation Proficiency Test</h1>
             <p class="subtitle">HB Recording System</p>
         </header>
+
         <main>
             <section class="input-group">
                 <label for="student-id">受講生番号</label>
-                <input type="text" id="student-id" placeholder="例: L1234567890" spellcheck="false" required maxlength="11">
+                <input type="text" id="student-id" placeholder="例: L1234567890" spellcheck="false" required
+                    maxlength="11">
                 <p class="input-hint">半角大文字L + 数字10桁で入力してください</p>
             </section>
+
             <section class="input-group">
                 <label for="student-name">氏名（ローマ字）</label>
-                <input type="text" id="student-name" placeholder="例: Hasegawa Makoto" spellcheck="false" required>
+                <input type="text" id="student-name" placeholder="例: Yamada Taro" spellcheck="false" required>
                 <p class="input-hint">半角ローマ字で入力してください</p>
             </section>
+
             <section class="input-group">
                 <label for="student-level">テストレベル</label>
                 <select id="student-level" required>
@@ -43,6 +51,7 @@
                     <option value="4C">4C</option>
                 </select>
             </section>
+
             <section id="task-section" class="task-section hidden">
                 <div class="task-header">
                     <h2>今日の課題フレーズ</h2>
@@ -52,11 +61,13 @@
                     <p id="phrase-text">Loading...</p>
                 </div>
             </section>
+
             <section class="recorder-section">
                 <div class="visualizer-container">
                     <canvas id="visualizer"></canvas>
                     <div id="status-badge" class="badge ready">Ready</div>
                 </div>
+
                 <div class="controls">
                     <button id="record-btn" class="btn-record">
                         <span class="icon"></span>
@@ -64,6 +75,7 @@
                     </button>
                 </div>
             </section>
+
             <section id="preview-section" class="preview-section hidden">
                 <h3>録音内容の確認</h3>
                 <audio id="audio-player" controls></audio>
@@ -72,14 +84,18 @@
                     <button id="upload-btn" class="btn-primary">これで保存する</button>
                 </div>
             </section>
+
             <section id="status-message" class="status-message hidden">
                 <!-- Status content dynamically inserted -->
             </section>
         </main>
+
         <footer>
             <p>&copy;Link Academy Inc. ALL Rights Reserved.</p>
         </footer>
     </div>
-    <script src="app.js?v=1.4"></script>
+
+    <script src="app.js?v=1.5"></script>
 </body>
+
 </html>
