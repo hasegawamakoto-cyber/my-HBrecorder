@@ -3,7 +3,7 @@
 const SUPABASE_URL = '__SUPABASE_URL__';
 const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
 const GAS_WEBAPP_URL = '__GAS_WEBAPP_URL__';
-const TROUBLES_GAS_WEBAPP_URL = '__TROUBLES_GAS_WEBAPP_URL__';
+const TROUBLES_GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzfmj_owugpcoGZXKe_lto5c1ruE1RTlxNXSrsRsX7aJkW69bSkMVTXeV0-HsRHg0dr/exec';
 
 let supabaseClient = null;
 try {
