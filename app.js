@@ -21,7 +21,8 @@ try {
 const studentIdInput = document.getElementById('student-id');
 const studentNameInput = document.getElementById('student-name');
 const studentLevelInput = document.getElementById('student-level');
-const studentTroubleInput = document.getElementById('student-trouble');
+const studentTroubleInput1 = document.getElementById('student-trouble-1');
+const studentTroubleInput2 = document.getElementById('student-trouble-2');
 const recordBtn = document.getElementById('record-btn');
 const statusBadge = document.getElementById('status-badge');
 const statusMessage = document.getElementById('status-message');
@@ -133,13 +134,14 @@ async function startRecording() {
     const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
     const studentLevel = studentLevelInput.value;
-    const studentTrouble = studentTroubleInput.value;
+    const studentTrouble1 = studentTroubleInput1.value;
+    const studentTrouble2 = studentTroubleInput2.value;
 
     // Validation: L + 10 digits
     const studentIdPattern = /^L\d{10}$/;
 
-    if (!studentId || !studentName || !studentLevel || !studentTrouble) {
-        showStatus('受講生番号、氏名、テストレベル、悩みをすべて入力してください', 'error');
+    if (!studentId || !studentName || !studentLevel || !studentTrouble1) {
+        showStatus('受講生番号、氏名、テストレベル、悩み(1つ目)をすべて入力してください', 'error');
         return;
     }
 
@@ -229,12 +231,13 @@ async function handleUpload() {
     const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
     const studentLevel = studentLevelInput.value;
-    const studentTrouble = studentTroubleInput.value;
+    const studentTrouble1 = studentTroubleInput1.value;
+    const studentTrouble2 = studentTroubleInput2.value;
 
-    if (!latestBlob || !studentId || !studentName || !studentLevel || !studentTrouble) return;
+    if (!latestBlob || !studentId || !studentName || !studentLevel || !studentTrouble1) return;
 
     updateUIState('uploading');
-    await uploadToSupabase(latestBlob, studentId, studentName, studentLevel, studentTrouble);
+    await uploadToSupabase(latestBlob, studentId, studentName, studentLevel, studentTrouble1, studentTrouble2);
 
     // Reset to beginning after success
     currentPhraseIndex = 0;
@@ -264,7 +267,7 @@ function getFormattedTimestamp() {
     return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
 }
 
-async function uploadToSupabase(blob, studentId, studentName, studentLevel, studentTrouble) {
+async function uploadToSupabase(blob, studentId, studentName, studentLevel, studentTrouble1, studentTrouble2) {
     if (!supabaseClient) {
         showStatus('Supabaseが設定されていないか、初期化に失敗しています。', 'error');
         updateUIState('ready');
@@ -315,7 +318,7 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel, stud
         const ss = String(now.getSeconds()).padStart(2, '0');
         const dateStr = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
 
-        await sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble, publicUrl);
+        await sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble1, studentTrouble2, publicUrl);
 
         showStatus(`全ての保存が完了しました！: ${fileName}`, 'success');
         updateUIState('ready');
@@ -336,13 +339,14 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel, stud
 }
 
 // GAS transmission logic
-async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble, audioUrl) {
+async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble1, studentTrouble2, audioUrl) {
     const payload = {
         studentId: studentId,
         studentName: studentName,
         date: dateStr,
         studentLevel: studentLevel,
-        studentTrouble: studentTrouble,
+        studentTrouble1: studentTrouble1,
+        studentTrouble2: studentTrouble2 || "",
         audioUrl: audioUrl
     };
     
@@ -373,9 +377,11 @@ function updateUIState(state) {
     studentNameInput.disabled = false;
     studentLevelInput.disabled = false;
     if(studentLevelInput.value) {
-        studentTroubleInput.disabled = false;
+        studentTroubleInput1.disabled = false;
+        studentTroubleInput2.disabled = false;
     } else {
-        studentTroubleInput.disabled = true;
+        studentTroubleInput1.disabled = true;
+        studentTroubleInput2.disabled = true;
     }
 
     if (state === 'recording') {
@@ -385,7 +391,8 @@ function updateUIState(state) {
         studentIdInput.disabled = true;
         studentNameInput.disabled = true;
         studentLevelInput.disabled = true;
-        studentTroubleInput.disabled = true;
+        studentTroubleInput1.disabled = true;
+        studentTroubleInput2.disabled = true;
 
         if (currentPhraseIndex < PHRASES.length - 1) {
             recordBtn.querySelector('.text').textContent = '次のフレーズへ';
@@ -403,7 +410,8 @@ function updateUIState(state) {
         studentIdInput.disabled = true;
         studentNameInput.disabled = true;
         studentLevelInput.disabled = true;
-        studentTroubleInput.disabled = true;
+        studentTroubleInput1.disabled = true;
+        studentTroubleInput2.disabled = true;
         statusBadge.classList.add('ready');
         statusBadge.textContent = 'Review';
     } else if (state === 'uploading') {
@@ -438,19 +446,27 @@ function showStatus(msg, type) {
 // Event Listeners
 studentLevelInput.addEventListener('change', () => {
     const level = studentLevelInput.value;
-    studentTroubleInput.innerHTML = '<option value="" disabled selected>選択してください</option>';
+    studentTroubleInput1.innerHTML = '<option value="" disabled selected>選択してください</option>';
+    studentTroubleInput2.innerHTML = '<option value="" selected>なし（2つ目の悩みがある場合のみ選択）</option>';
     
     if (troublesData[level] && troublesData[level].length > 0) {
-        studentTroubleInput.disabled = false;
+        studentTroubleInput1.disabled = false;
+        studentTroubleInput2.disabled = false;
         troublesData[level].forEach(trouble => {
-            const option = document.createElement('option');
-            option.value = trouble;
-            option.textContent = trouble;
-            studentTroubleInput.appendChild(option);
+            const option1 = document.createElement('option');
+            option1.value = trouble;
+            option1.textContent = trouble;
+            studentTroubleInput1.appendChild(option1);
+
+            const option2 = document.createElement('option');
+            option2.value = trouble;
+            option2.textContent = trouble;
+            studentTroubleInput2.appendChild(option2);
         });
     } else {
-        studentTroubleInput.innerHTML = '<option value="" disabled selected>このレベルの悩みデータがありません</option>';
-        studentTroubleInput.disabled = true;
+        studentTroubleInput1.innerHTML = '<option value="" disabled selected>このレベルの悩みデータがありません</option>';
+        studentTroubleInput1.disabled = true;
+        studentTroubleInput2.disabled = true;
     }
 });
 
