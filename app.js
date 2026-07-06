@@ -445,14 +445,20 @@ function showStatus(msg, type) {
 
 // Event Listeners
 studentLevelInput.addEventListener('change', () => {
-    const level = studentLevelInput.value;
+    const originalLevel = studentLevelInput.value;
+    // スプレッドシート側のデータ（3, 4など）と合わせるための処理
+    let levelData = troublesData[originalLevel];
+    if (!levelData && originalLevel.length > 1) {
+        levelData = troublesData[originalLevel.charAt(0)]; // '3A' -> '3' として探す
+    }
+
     studentTroubleInput1.innerHTML = '<option value="" disabled selected>選択してください</option>';
     studentTroubleInput2.innerHTML = '<option value="" selected>なし（2つ目の悩みがある場合のみ選択）</option>';
     
-    if (troublesData[level] && troublesData[level].length > 0) {
+    if (levelData && levelData.length > 0) {
         studentTroubleInput1.disabled = false;
         studentTroubleInput2.disabled = false;
-        troublesData[level].forEach(trouble => {
+        levelData.forEach(trouble => {
             const option1 = document.createElement('option');
             option1.value = trouble;
             option1.textContent = trouble;
