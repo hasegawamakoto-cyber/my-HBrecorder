@@ -3,6 +3,7 @@
 const SUPABASE_URL = '__SUPABASE_URL__';
 const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
 const GAS_WEBAPP_URL = '__GAS_WEBAPP_URL__';
+const TROUBLES_GAS_WEBAPP_URL = '__TROUBLES_GAS_WEBAPP_URL__';
 
 let supabaseClient = null;
 try {
@@ -20,6 +21,7 @@ try {
 const studentIdInput = document.getElementById('student-id');
 const studentNameInput = document.getElementById('student-name');
 const studentLevelInput = document.getElementById('student-level');
+const studentTroubleInput = document.getElementById('student-trouble');
 const recordBtn = document.getElementById('record-btn');
 const statusBadge = document.getElementById('status-badge');
 const statusMessage = document.getElementById('status-message');
@@ -42,18 +44,41 @@ let analyser = null;
 let animationId = null;
 let latestBlob = null;
 let latestAudioURL = null;
+let troublesData = {}; // Fetched from GAS
 
 const PHRASES = [
-    "Where do you live in Los Angeles?",
-    "I heard her first word yesterday.",
-    "Please tell me how to get there.",
-    "Let’s go downtown after the party.",
-    "Can you help me find my car?"
+    "Sean and Doug saw women in Los Angeles yesterday.",
+    "My father and mother won't be at the party tonight.",
+    "Can Joe vote for Arthur in the video game?",
+    "The men heard her first word on the phone.",
+    "Shelly and Sean work downtown and live in Santa Ana."
 ];
 let currentPhraseIndex = 0;
 
+// Fetch Troubles Data
+async function fetchTroublesData() {
+    if (TROUBLES_GAS_WEBAPP_URL === '__TROUBLES_GAS_WEBAPP_URL__') {
+        // Fallback dummy data based on user's image for testing before GAS is setup
+        troublesData = {
+            "1A": ["・Eロケーションがやりにくい", "・BTの上げ下げが難しい", "・Cロケーションが下の歯から離れてしまう", "・舌が思うように動かない", "・口があかない", "★選ばれなかった場合"],
+            "1B": ["・シュワの音が安定しない", "・ショートIが安定しない", "・二重母音のリズムを、2:1にしているつもりができていない", "・舌のゼロロケーションの時に、舌が浮いてしまう", "・カタカナ感が抜けない", "★選ばれなかった場合"],
+            "2": ["・バイブレーションが必要な音が苦手", "・/s/とpucker/ロングs/の違いを出すのが苦手", "・短音では出せるが、単語の中の子音の音が不安定になる"]
+        };
+        return;
+    }
+
+    try {
+        const response = await fetch(TROUBLES_GAS_WEBAPP_URL);
+        troublesData = await response.json();
+    } catch (err) {
+        console.error('Failed to fetch troubles data:', err);
+        showStatus('悩みのデータの取得に失敗しました', 'error');
+    }
+}
+
 // Initialize UI
 function initUI() {
+    fetchTroublesData();
     updatePhraseDisplay();
     updateUIState('ready');
 }
@@ -108,12 +133,13 @@ async function startRecording() {
     const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
     const studentLevel = studentLevelInput.value;
+    const studentTrouble = studentTroubleInput.value;
 
     // Validation: L + 10 digits
     const studentIdPattern = /^L\d{10}$/;
 
-    if (!studentId || !studentName || !studentLevel) {
-        showStatus('受講生番号、氏名、テストレベルをすべて入力してください', 'error');
+    if (!studentId || !studentName || !studentLevel || !studentTrouble) {
+        showStatus('受講生番号、氏名、テストレベル、悩みをすべて入力してください', 'error');
         return;
     }
 
@@ -203,11 +229,12 @@ async function handleUpload() {
     const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
     const studentLevel = studentLevelInput.value;
+    const studentTrouble = studentTroubleInput.value;
 
-    if (!latestBlob || !studentId || !studentName || !studentLevel) return;
+    if (!latestBlob || !studentId || !studentName || !studentLevel || !studentTrouble) return;
 
     updateUIState('uploading');
-    await uploadToSupabase(latestBlob, studentId, studentName, studentLevel);
+    await uploadToSupabase(latestBlob, studentId, studentName, studentLevel, studentTrouble);
 
     // Reset to beginning after success
     currentPhraseIndex = 0;
@@ -237,7 +264,7 @@ function getFormattedTimestamp() {
     return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
 }
 
-async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
+async function uploadToSupabase(blob, studentId, studentName, studentLevel, studentTrouble) {
     if (!supabaseClient) {
         showStatus('Supabaseが設定されていないか、初期化に失敗しています。', 'error');
         updateUIState('ready');
@@ -288,7 +315,7 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
         const ss = String(now.getSeconds()).padStart(2, '0');
         const dateStr = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
 
-        await sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, publicUrl);
+        await sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble, publicUrl);
 
         showStatus(`全ての保存が完了しました！: ${fileName}`, 'success');
         updateUIState('ready');
@@ -309,12 +336,13 @@ async function uploadToSupabase(blob, studentId, studentName, studentLevel) {
 }
 
 // GAS transmission logic
-async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, audioUrl) {
+async function sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble, audioUrl) {
     const payload = {
         studentId: studentId,
         studentName: studentName,
         date: dateStr,
         studentLevel: studentLevel,
+        studentTrouble: studentTrouble,
         audioUrl: audioUrl
     };
     
@@ -344,6 +372,11 @@ function updateUIState(state) {
     studentIdInput.disabled = false;
     studentNameInput.disabled = false;
     studentLevelInput.disabled = false;
+    if(studentLevelInput.value) {
+        studentTroubleInput.disabled = false;
+    } else {
+        studentTroubleInput.disabled = true;
+    }
 
     if (state === 'recording') {
         recordBtn.style.display = 'flex';
@@ -352,6 +385,7 @@ function updateUIState(state) {
         studentIdInput.disabled = true;
         studentNameInput.disabled = true;
         studentLevelInput.disabled = true;
+        studentTroubleInput.disabled = true;
 
         if (currentPhraseIndex < PHRASES.length - 1) {
             recordBtn.querySelector('.text').textContent = '次のフレーズへ';
@@ -369,6 +403,7 @@ function updateUIState(state) {
         studentIdInput.disabled = true;
         studentNameInput.disabled = true;
         studentLevelInput.disabled = true;
+        studentTroubleInput.disabled = true;
         statusBadge.classList.add('ready');
         statusBadge.textContent = 'Review';
     } else if (state === 'uploading') {
@@ -401,6 +436,24 @@ function showStatus(msg, type) {
 }
 
 // Event Listeners
+studentLevelInput.addEventListener('change', () => {
+    const level = studentLevelInput.value;
+    studentTroubleInput.innerHTML = '<option value="" disabled selected>選択してください</option>';
+    
+    if (troublesData[level] && troublesData[level].length > 0) {
+        studentTroubleInput.disabled = false;
+        troublesData[level].forEach(trouble => {
+            const option = document.createElement('option');
+            option.value = trouble;
+            option.textContent = trouble;
+            studentTroubleInput.appendChild(option);
+        });
+    } else {
+        studentTroubleInput.innerHTML = '<option value="" disabled selected>このレベルの悩みデータがありません</option>';
+        studentTroubleInput.disabled = true;
+    }
+});
+
 recordBtn.addEventListener('click', () => {
     if (isRecording) {
         nextPhrase();
