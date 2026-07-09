@@ -1,17 +1,15 @@
-// Supabase Configuration - TEMPLATE
-// The user should fill these values
-const SUPABASE_URL = '__SUPABASE_URL__';
-const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
-const GAS_WEBAPP_URL = '__GAS_WEBAPP_URL__';
+const SUPABASE_URL = 'https://qyttpvyjqgmkwhrixjff.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5dHRwdnlqcWdta3docml4amZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMTU1NTEsImV4cCI6MjA4ODc5MTU1MX0.QXHU4G7lQ7LV73bzEWjVYu-XtLvaodSoqR4AYwQpUhU';
+const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzfmj_owugpcoGZXKe_lto5c1ruE1RTlxNXSrsRsX7aJkW69bSkMVTXeV0-HsRHg0dr/exec';
 const TROUBLES_GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzfmj_owugpcoGZXKe_lto5c1ruE1RTlxNXSrsRsX7aJkW69bSkMVTXeV0-HsRHg0dr/exec';
 
 let supabaseClient = null;
 try {
-    if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase) {
+    if (window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('Supabase initialized successfully');
     } else {
-        console.warn('Supabase URL is placeholder or library not loaded');
+        console.warn('Supabase library not loaded');
     }
 } catch (e) {
     console.error('Failed to initialize Supabase:', e);
@@ -270,74 +268,66 @@ function getFormattedTimestamp() {
 }
 
 async function uploadToSupabase(blob, studentId, studentName, studentLevel, studentTrouble1, studentTrouble2) {
+    const timestamp = getFormattedTimestamp();
+    let publicUrl = "Supabase未設定のため音声URLなし";
+    let fileName = "未保存";
+
     if (!supabaseClient) {
-        showStatus('Supabaseが設定されていないか、初期化に失敗しています。', 'error');
-        updateUIState('ready');
-        return;
+        console.warn('Supabase is not configured. Skipping audio upload.');
+        showStatus('Supabaseが未設定のため、音声は保存されませんがデータは送信します...', 'uploading');
+    } else {
+        // Sanitize for Supabase Storage key: Replace problematic characters
+        const safeStudentId = studentId.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const safeStudentName = studentName.replace(/[./\\:*?"<>| ]/g, '_');
+        const safeStudentLevel = studentLevel.replace(/[./\\:*?"<>| ]/g, ''); 
+
+        const extension = blob.type.includes('wav') ? 'wav' : 'webm';
+        fileName = `${safeStudentId}_${safeStudentName}_${safeStudentLevel}_${timestamp}.${extension}`;
+        console.log('Attempting upload with filename:', fileName);
+
+        try {
+            const { data, error } = await supabaseClient.storage
+                .from('recordings')
+                .upload(fileName, blob, {
+                    contentType: blob.type,
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (error) throw error;
+
+            // 2. Get Public URL
+            const { data: { publicUrl: url } } = supabaseClient.storage
+                .from('recordings')
+                .getPublicUrl(fileName);
+            publicUrl = url;
+
+            showStatus(`音声ファイルを保存しました。DBに記録中...`, 'success');
+        } catch (err) {
+            console.error('Supabase upload error:', err);
+            showStatus('音声の保存に失敗しましたが、データ送信を試みます...', 'error');
+            publicUrl = "音声アップロード失敗";
+        }
     }
 
-    const timestamp = getFormattedTimestamp();
-
-    // Sanitize for Supabase Storage key: Replace problematic characters
-    // Especially dot (.) inside the name or level can cause "Invalid key" issues
-    const safeStudentId = studentId.replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const safeStudentName = studentName.replace(/[./\\:*?"<>| ]/g, '_');
-    const safeStudentLevel = studentLevel.replace(/[./\\:*?"<>| ]/g, ''); // Remove dot from "Lv.1A" etc.
-
-    const extension = blob.type.includes('wav') ? 'wav' : 'webm';
-    const fileName = `${safeStudentId}_${safeStudentName}_${safeStudentLevel}_${timestamp}.${extension}`;
-    console.log('Attempting upload with filename:', fileName);
+    // 3. Send to Google Sheets (GAS)
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const dateStr = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
 
     try {
-        const { data, error } = await supabaseClient.storage
-            .from('recordings')
-            .upload(fileName, blob, {
-                contentType: blob.type,
-                cacheControl: '3600',
-                upsert: false
-            });
-
-        if (error) {
-            console.error('Supabase upload error:', error);
-            throw error;
-        }
-
-        // 2. Get Public URL
-        const { data: { publicUrl } } = supabaseClient.storage
-            .from('recordings')
-            .getPublicUrl(fileName);
-
-        showStatus(`音声ファイルを保存しました。DBに記録中...`, 'success');
-
-        // 3. Send to Google Sheets (GAS)
-        // Format date as yyyy/mm/dd hh:mm:ss for Spreadsheet
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const min = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const dateStr = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
-
         await sendToGoogleSheets(studentId, studentName, dateStr, studentLevel, studentTrouble1, studentTrouble2, publicUrl);
-
-        showStatus(`全ての保存が完了しました！: ${fileName}`, 'success');
-        updateUIState('ready');
-    } catch (err) {
-        console.error('Upload failed:', err);
-        let errorMsg = err.message || '不明なエラー';
-
-        // Translate common Supabase errors for students
-        if (errorMsg.includes('Invalid key')) {
-            errorMsg = 'ファイル名に制限事項があります。管理者に連絡してください。';
-        } else if (errorMsg.includes('Bucket not found')) {
-            errorMsg = '保存先の設定（Bucket）が見つかりません。';
-        }
-
-        showStatus(`保存に失敗しました (${errorMsg})。通信環境を確認し、解決しない場合は管理者にエラー内容を伝えてください。`, 'error');
-        updateUIState('ready');
+        showStatus(`スプレッドシートへの保存が完了しました！`, 'success');
+    } catch(err) {
+        showStatus(`スプレッドシートへの保存に失敗しました。`, 'error');
     }
+    
+    updateUIState('ready');
 }
 
 // GAS transmission logic
