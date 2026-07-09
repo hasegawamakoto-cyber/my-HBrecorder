@@ -58,22 +58,22 @@ let currentPhraseIndex = 0;
 
 // Fetch Troubles Data
 async function fetchTroublesData() {
-    if (TROUBLES_GAS_WEBAPP_URL === '__TROUBLES_GAS_WEBAPP_URL__') {
-        // Fallback dummy data based on user's image for testing before GAS is setup
-        troublesData = {
-            "1A": ["・Eロケーションがやりにくい", "・BTの上げ下げが難しい", "・Cロケーションが下の歯から離れてしまう", "・舌が思うように動かない", "・口があかない", "★選ばれなかった場合"],
-            "1B": ["・シュワの音が安定しない", "・ショートIが安定しない", "・二重母音のリズムを、2:1にしているつもりができていない", "・舌のゼロロケーションの時に、舌が浮いてしまう", "・カタカナ感が抜けない", "★選ばれなかった場合"],
-            "2": ["・バイブレーションが必要な音が苦手", "・/s/とpucker/ロングs/の違いを出すのが苦手", "・短音では出せるが、単語の中の子音の音が不安定になる"]
-        };
-        return;
-    }
-
     try {
         const response = await fetch(TROUBLES_GAS_WEBAPP_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         troublesData = await response.json();
     } catch (err) {
-        console.error('Failed to fetch troubles data:', err);
-        showStatus('悩みのデータの取得に失敗しました', 'error');
+        console.error('Failed to fetch troubles data from GAS:', err);
+        // Fallback to statically known data to ensure the app continues to work
+        troublesData = {
+            "1A":["Eロケーションがやりにくい","BTの上げ下げが難しい","Cロケーションが下の歯から離れてしまう","舌が思うように動かない","口があかない","★特になし"],
+            "1B":["シュワの音が安定しない","ショートIが安定しない","二重母音のリズムを、2:1にしているつもりができていない","舌のゼロロケーションの時に、舌が浮いてしまう","カタカナ感が抜けない","★特になし"],
+            "2":["バイブレーションが必要な音が苦手","/s/とpucker/ロングs/の違いを出すのが苦手","短音では出せるが、単語の中の子音の音が不安定になる","短音では出せるが、単語の中の母音の音が不安定になる","★特になし"],
+            "3":["リンキングするところとしないところが分からない","音が弱くなるところが分からない","強弱のない読み方になってしまう","発音記号通りの読み方かや口語的な読み方へ切り替えられていない","フラップTが苦手","呼吸をするタイミング/文を切るタイミングが掴めない","Rブレンズ？？","(例)trip→トゥリップ/ train→とぅ(ちょ)れいん travel→とぅ(ちょ)ラベル　が苦手","★特になし"],
+            "4":["感情を入れたような読み方ができていない","テンポが一定になってしまう","スピードが上がると抑揚がなくなる","初めての文でのリズムや読み方が分からない","スピードの速さについていけない（慣れない）","抑揚やスピードを意識すると発音が崩れてしまう","★特になし"]
+        };
     }
 }
 
