@@ -53,10 +53,15 @@
             </section>
 
             <section class="input-group">
-                <label for="student-trouble">悩み</label>
-                <select id="student-trouble" required disabled>
-                    <option value="" disabled selected>先にテストレベルを選択してください</option>
-                </select>
+                <label>悩み（最大2つまで）</label>
+                <div class="trouble-selects">
+                    <select id="student-trouble-1" required disabled>
+                        <option value="" disabled selected>先にテストレベルを選択してください</option>
+                    </select>
+                    <select id="student-trouble-2" disabled>
+                        <option value="" selected>なし（2つ目の悩みがある場合のみ選択）</option>
+                    </select>
+                </div>
             </section>
 
             <section id="task-section" class="task-section hidden">
@@ -98,11 +103,11 @@
         </main>
 
         <footer>
-            <p>&copy;Link Academy Inc. ALL Rights Reserved.</p>
+            <p>&copy;Link Academy Inc. ALL Rights Reserved. <span style="margin-left:10px; color:#a0aec0; font-size:0.85em;">Ver.2.1.1</span></p>
         </footer>
     </div>
 
-    <script src="app.js?v=1.5"></script>
+    <script src="app.js?v=2.1.1"></script>
 </body>
 
 </html>
