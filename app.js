@@ -78,9 +78,11 @@ async function fetchTroublesData() {
 }
 
 // Initialize UI
-function initUI() {
-    fetchTroublesData();
+async function initUI() {
+    studentLevelInput.disabled = true;
+    await fetchTroublesData();
     updatePhraseDisplay();
+    populateTroublesDropdown();
     updateUIState('ready');
 }
 
@@ -443,9 +445,10 @@ function showStatus(msg, type) {
     statusMessage.className = `status-message ${type}`;
 }
 
-// Event Listeners
-studentLevelInput.addEventListener('change', () => {
+function populateTroublesDropdown() {
     const originalLevel = studentLevelInput.value;
+    if (!originalLevel) return;
+
     // スプレッドシート側のデータ（3, 4など）と合わせるための処理
     let levelData = troublesData[originalLevel];
     if (!levelData && originalLevel.length > 1) {
@@ -474,7 +477,10 @@ studentLevelInput.addEventListener('change', () => {
         studentTroubleInput1.disabled = true;
         studentTroubleInput2.disabled = true;
     }
-});
+}
+
+// Event Listeners
+studentLevelInput.addEventListener('change', populateTroublesDropdown);
 
 recordBtn.addEventListener('click', () => {
     if (isRecording) {
