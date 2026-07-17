@@ -74,6 +74,17 @@ header {
     margin-top: 4px;
 }
 
+.warning-notice {
+    background: rgba(244, 63, 94, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fca5a5;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
 .input-group {
     margin-bottom: 24px;
 }
@@ -112,7 +123,13 @@ header {
 .input-group select:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.trouble-selects {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .input-hint {
@@ -385,6 +402,52 @@ header {
 
 .hidden {
     display: none !important;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 400px;
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.modal-text {
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin-bottom: 24px;
+    color: var(--text-main);
+}
+
+.modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-actions button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 footer {
