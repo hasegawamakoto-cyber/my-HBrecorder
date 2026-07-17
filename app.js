@@ -33,6 +33,9 @@ const audioPlayer = document.getElementById('audio-player');
 const retryBtn = document.getElementById('retry-btn');
 const uploadBtn = document.getElementById('upload-btn');
 const taskSection = document.getElementById('task-section');
+const confirmationModal = document.getElementById('confirmation-modal');
+const modalCancelBtn = document.getElementById('modal-cancel-btn');
+const modalSubmitBtn = document.getElementById('modal-submit-btn');
 
 // State
 let mediaRecorder = null;
@@ -227,7 +230,24 @@ function stopRecording() {
     }
 }
 
+function handleUploadClick() {
+    const studentId = studentIdInput.value.trim();
+    const studentName = studentNameInput.value.trim();
+    const studentLevel = studentLevelInput.value;
+    const studentTrouble1 = studentTroubleInput1.value;
+
+    if (!latestBlob || !studentId || !studentName || !studentLevel || !studentTrouble1) return;
+
+    confirmationModal.classList.remove('hidden');
+}
+
+function handleModalCancel() {
+    confirmationModal.classList.add('hidden');
+}
+
 async function handleUpload() {
+    confirmationModal.classList.add('hidden');
+    
     const studentId = studentIdInput.value.trim();
     const studentName = studentNameInput.value.trim();
     const studentLevel = studentLevelInput.value;
@@ -481,7 +501,9 @@ recordBtn.addEventListener('click', () => {
 });
 
 retryBtn.addEventListener('click', handleRetry);
-uploadBtn.addEventListener('click', handleUpload);
+uploadBtn.addEventListener('click', handleUploadClick);
+modalCancelBtn.addEventListener('click', handleModalCancel);
+modalSubmitBtn.addEventListener('click', handleUpload);
 
 // Prevent accidental closure
 window.addEventListener('beforeunload', (e) => {
